@@ -1574,8 +1574,6 @@ def normalize_gpt_image_2_size(size):
     width, height = parse_size_pair(size)
     if not width or not height:
         return size or "auto"
-    if width == height and (width > 2048 or width * height > 4_194_304):
-        return "3840x2160"
     ratio = width / height
     if ratio > 3:
         width = height * 3

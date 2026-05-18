@@ -95,9 +95,15 @@ For OpenAI-compatible GPT Image models such as `gpt-image-2`, text-only requests
 
 Frontend consumers include the standalone Online Image page, Infinite Canvas API generation nodes, GPT Chat image mode, and the default Text to Image console (`static/zimage.html`) API engine. The Text to Image console filters out `modelscope` for its generic API tab, keeps ModelScope as its own engine, and prefers `gpt-image-*` models when a provider also advertises image-like models that are not accepted by `/v1/images/generations`.
 
+The Text to Image console does not call `/api/online-image` directly. It starts background work through `/api/canvas-image-tasks` so each click can create a separate in-flight API image task while earlier tasks continue rendering. Its size UI is ratio + resolution:
+
+- 1K is the safest default for speed, cost, and broad model compatibility.
+- 2K is useful for detail when the selected provider/model supports larger GPT Image-style outputs.
+- 4K uses model-constrained dimensions such as `3840x2160`, `2160x3840`, or `2880x2880` for square. It should be treated as slower, more expensive, and more likely to hit upstream limits.
+
 ### `POST /api/canvas-image-tasks`
 
-Starts the same image generation flow asynchronously for Infinite Canvas nodes and returns `{ "task_id": "...", "status": "queued" }`.
+Starts the same image generation flow asynchronously for Infinite Canvas nodes and the Text to Image API engine, then returns `{ "task_id": "...", "status": "queued" }`.
 
 ### `GET /api/canvas-image-tasks/{task_id}`
 

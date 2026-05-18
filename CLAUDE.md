@@ -13,7 +13,7 @@ Never commit real `API/.env`, `data/`, or generated media/runtime files.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Infinite-Canvas** (1252 symbols, 2345 relationships, 108 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Infinite-Canvas** (1261 symbols, 2367 relationships, 109 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -51,7 +51,7 @@ This project is indexed by GitNexus as **Infinite-Canvas** (1252 symbols, 2345 r
 | Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
 | Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-| Work in the Tests area (47 symbols) | `.claude/skills/generated/tests/SKILL.md` |
+| Work in the Tests area (50 symbols) | `.claude/skills/generated/tests/SKILL.md` |
 | Work in the Static area (27 symbols) | `.claude/skills/generated/static/SKILL.md` |
 | Work in the Scripts area (20 symbols) | `.claude/skills/generated/scripts/SKILL.md` |
 | Work in the Cluster_30 area (15 symbols) | `.claude/skills/generated/cluster-30/SKILL.md` |
@@ -63,7 +63,7 @@ This project is indexed by GitNexus as **Infinite-Canvas** (1252 symbols, 2345 r
 | Work in the Cluster_11 area (8 symbols) | `.claude/skills/generated/cluster-11/SKILL.md` |
 | Work in the Cluster_12 area (8 symbols) | `.claude/skills/generated/cluster-12/SKILL.md` |
 | Work in the Cluster_13 area (8 symbols) | `.claude/skills/generated/cluster-13/SKILL.md` |
-| Work in the Cluster_41 area (8 symbols) | `.claude/skills/generated/cluster-41/SKILL.md` |
+| Work in the Cluster_42 area (8 symbols) | `.claude/skills/generated/cluster-42/SKILL.md` |
 | Work in the Cluster_31 area (7 symbols) | `.claude/skills/generated/cluster-31/SKILL.md` |
 | Work in the Cluster_0 area (5 symbols) | `.claude/skills/generated/cluster-0/SKILL.md` |
 | Work in the Cluster_34 area (5 symbols) | `.claude/skills/generated/cluster-34/SKILL.md` |

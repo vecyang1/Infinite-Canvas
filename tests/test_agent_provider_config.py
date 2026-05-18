@@ -244,7 +244,7 @@ class AgentProviderConfigTest(unittest.TestCase):
         self.assertIn("switchEngine('api')", ZIMAGE)
         self.assertIn("runApiTask(prompt)", ZIMAGE)
         self.assertIn("fetch('/api/config')", ZIMAGE)
-        self.assertIn("fetch('/api/online-image'", ZIMAGE)
+        self.assertIn("fetch('/api/canvas-image-tasks'", ZIMAGE)
         self.assertIn("const HISTORY_TYPES = ['zimage', 'online', 'cloud'];", ZIMAGE)
         self.assertIn("LIVE_HISTORY_TYPES.includes(msg.data?.type)", ZIMAGE)
         self.assertIn("function preferredApiImageModel", ZIMAGE)
@@ -253,6 +253,21 @@ class AgentProviderConfigTest(unittest.TestCase):
         self.assertIn("model:apiModel", ZIMAGE)
         self.assertIn("'studio.renderApi': 'API 生成'", I18N)
         self.assertIn("'studio.renderApi': 'API Generate'", I18N)
+
+    def test_text_to_image_console_uses_async_api_tasks_and_ratio_size_controls(self):
+        self.assertIn("id=\"ratioSelect\"", ZIMAGE)
+        self.assertIn("id=\"resolutionSelect\"", ZIMAGE)
+        self.assertIn("function apiImageSize", ZIMAGE)
+        self.assertIn("const SIZE_MAP", ZIMAGE)
+        self.assertIn("'1k':'1024x1024'", ZIMAGE)
+        self.assertIn("'2k':'2048x2048'", ZIMAGE)
+        self.assertIn("'4k':'2880x2880'", ZIMAGE)
+        self.assertIn("fetch('/api/canvas-image-tasks'", ZIMAGE)
+        self.assertIn("pollApiTask", ZIMAGE)
+        self.assertIn("size:apiImageSize()", ZIMAGE)
+        self.assertIn("activeApiTasks", ZIMAGE)
+        self.assertNotIn("mainGenBtn.disabled = isLoading", ZIMAGE)
+        self.assertNotIn("size: `${document.getElementById('width').value}x${document.getElementById('height').value}`", ZIMAGE)
 
     def test_modelscope_static_pages_do_not_read_raw_saved_token(self):
         for page in MS_STATIC_PAGES:

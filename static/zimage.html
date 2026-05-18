@@ -151,6 +151,27 @@
             cursor: not-allowed;
         }
 
+        .size-select {
+            height: 28px;
+            border: 1px solid #edf2f7;
+            border-radius: 12px;
+            background: #fff;
+            color: #111827;
+            outline: none;
+            padding: 0 9px;
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        .size-preview {
+            min-width: 82px;
+            color: #9ca3af;
+            font-size: 10px;
+            font-weight: 850;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
         @media (max-width: 768px) {
             .mode-switcher {
                 width: min(390px, calc(100vw - 96px));
@@ -269,12 +290,22 @@
 
                         <div class="flex flex-col">
                             <span class="text-[9px] font-bold text-gray-400 uppercase mb-1" data-i18n="studio.dimensions">Dimensions</span>
-                            <div class="flex items-center gap-2 text-xs font-bold">
-                                <input id="width" type="number" value="1024"
-                                    class="w-10 bg-transparent outline-none border-b border-transparent focus:border-black">
-                                <span class="text-gray-200">×</span>
-                                <input id="height" type="number" value="1024"
-                                    class="w-10 bg-transparent outline-none border-b border-transparent focus:border-black">
+                            <div class="flex items-center gap-2">
+                                <select id="ratioSelect" class="size-select" onchange="updateSizePreview()">
+                                    <option value="square">1:1</option>
+                                    <option value="landscape">3:2</option>
+                                    <option value="portrait">2:3</option>
+                                    <option value="wide">16:9</option>
+                                    <option value="story">9:16</option>
+                                    <option value="landscape43">4:3</option>
+                                    <option value="portrait43">3:4</option>
+                                </select>
+                                <select id="resolutionSelect" class="size-select" onchange="updateSizePreview()">
+                                    <option value="1k">1K</option>
+                                    <option value="2k">2K</option>
+                                    <option value="4k">4K</option>
+                                </select>
+                                <span id="sizePreview" class="size-preview">1024 × 1024</span>
                             </div>
                         </div>
 
@@ -379,6 +410,16 @@
         let apiProviders = [];
         let apiProvider = '';
         let apiModel = '';
+        let activeApiTasks = 0;
+        const SIZE_MAP = {
+            square:{'1k':'1024x1024','2k':'2048x2048','4k':'2880x2880'},
+            portrait:{'1k':'1024x1536','2k':'1360x2048','4k':'2352x3520'},
+            landscape:{'1k':'1536x1024','2k':'2048x1360','4k':'3520x2352'},
+            wide:{'1k':'1280x720','2k':'2048x1152','4k':'3840x2160'},
+            story:{'1k':'720x1280','2k':'1152x2048','4k':'2160x3840'},
+            portrait43:{'1k':'1008x1344','2k':'1536x2048','4k':'2448x3264'},
+            landscape43:{'1k':'1344x1008','2k':'2048x1536','4k':'3264x2448'}
+        };
 
         // WebSocket 
         const socket = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/stats?client_id=${encodeURIComponent(CLIENT_ID)}`);
@@ -430,6 +471,25 @@
                 || '';
         }
 
+        function apiImageSize(){
+            const ratio = document.getElementById('ratioSelect')?.value || 'square';
+            const resolution = document.getElementById('resolutionSelect')?.value || '1k';
+            return SIZE_MAP[ratio]?.[resolution] || SIZE_MAP.square[resolution] || SIZE_MAP.square['1k'];
+        }
+
+        function selectedSizeParts(){
+            const [width, height] = apiImageSize().split('x').map(v => parseInt(v, 10));
+            return {
+                width: Number.isFinite(width) ? width : 1024,
+                height: Number.isFinite(height) ? height : 1024
+            };
+        }
+
+        function updateSizePreview(){
+            const preview = document.getElementById('sizePreview');
+            if(preview) preview.innerText = apiImageSize().replace('x', ' × ');
+        }
+
         function renderApiControls(){
             const providerSelect = document.getElementById('apiProviderSelect');
             const modelSelect = document.getElementById('apiModelSelect');
@@ -479,7 +539,11 @@
         function updateRenderButtonText(){
             const btnText = document.getElementById('btnText');
             if(!btnText) return;
-            if(currentEngine === 'api') btnText.innerText = tr('studio.renderApi');
+            if(currentEngine === 'api') {
+                btnText.innerText = activeApiTasks > 0
+                    ? `${tr('studio.renderApi')} · ${activeApiTasks}`
+                    : tr('studio.renderApi');
+            }
             else if(currentEngine === 'cloud') btnText.innerText = tr('studio.renderCloud');
             else btnText.innerText = tr('studio.renderLocal');
         }
@@ -530,34 +594,61 @@
         async function runApiTask(prompt) {
             renderApiControls();
             if (!apiProvider || !apiModel) return alert(tr('studio.noApiProviders'));
-            setLoading(true);
-            const placeholder = createPlaceholder("API Rendering");
+            const placeholder = createPlaceholder(tr('studio.apiQueued'));
             document.getElementById('masonry').prepend(placeholder);
+            activeApiTasks++;
+            updateRenderButtonText();
 
             try {
-                const res = await fetch('/api/online-image', {
+                const res = await fetch('/api/canvas-image-tasks', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         prompt,
                         provider_id:apiProvider,
                         model:apiModel,
-                        size: `${document.getElementById('width').value}x${document.getElementById('height').value}`,
+                        size:apiImageSize(),
                         reference_images: []
                     })
                 });
                 const data = await res.json();
-                placeholder.remove();
-                if (res.ok && data.images?.length > 0) {
-                    renderImageCard(data, true);
+                if (res.ok && data.task_id) {
+                    setPlaceholderText(placeholder, tr('studio.apiRendering'));
+                    pollApiTask(data.task_id, placeholder);
                 } else {
                     throw new Error(data.detail || "API generation failed");
                 }
             } catch (e) {
+                activeApiTasks = Math.max(0, activeApiTasks - 1);
+                updateRenderButtonText();
                 placeholder.remove();
                 alert(e.message || "API generation failed");
+            }
+        }
+
+        async function pollApiTask(taskId, placeholder){
+            try {
+                while(true){
+                    await new Promise(r => setTimeout(r, 1400));
+                    const res = await fetch(`/api/canvas-image-tasks/${encodeURIComponent(taskId)}`);
+                    const data = await res.json();
+                    if(!res.ok) throw new Error(data.detail || "API generation failed");
+                    if(data.status === 'succeeded' && data.result){
+                        placeholder.remove();
+                        renderImageCard(data.result, true);
+                        return;
+                    }
+                    if(data.status === 'failed'){
+                        throw new Error(data.error || "API generation failed");
+                    }
+                    setPlaceholderText(placeholder, tr('studio.apiRendering'));
+                }
+            } catch(e) {
+                setPlaceholderText(placeholder, e.message || tr('studio.apiFailed'));
+                placeholder.classList.add('border-red-200', 'bg-red-50');
             } finally {
-                setLoading(false);
+                activeApiTasks = Math.max(0, activeApiTasks - 1);
+                updateRenderButtonText();
             }
         }
 
@@ -587,7 +678,7 @@
                     body: JSON.stringify({
                         prompt: prompt,
                         api_key: apiKey || '',
-                        resolution: `${document.getElementById('width').value}x${document.getElementById('height').value}`
+                        resolution: apiImageSize()
                     })
                 });
                 const data = await res.json();
@@ -612,13 +703,14 @@
             document.getElementById('masonry').prepend(placeholder);
 
             try {
+                const size = selectedSizeParts();
                 const res = await fetch('/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         prompt,
-                        width: parseInt(document.getElementById('width').value),
-                        height: parseInt(document.getElementById('height').value),
+                        width: size.width,
+                        height: size.height,
                         type: "zimage",
                         client_id: CLIENT_ID
                     })
@@ -637,7 +729,7 @@
         // 工具函数
         function setLoading(isLoading) {
             const btn = document.getElementById('mainGenBtn');
-            btn.disabled = isLoading;
+            btn.disabled = Boolean(isLoading && currentEngine !== 'api');
 
             if (isLoading) {
                 // Active state: Dark gray bg, filled yellow pulsing icon
@@ -652,10 +744,15 @@
             lucide.createIcons();
         }
 
+        function setPlaceholderText(placeholder, text) {
+            const label = placeholder?.querySelector('[data-placeholder-label]');
+            if (label) label.innerText = text;
+        }
+
         function createPlaceholder(text) {
             const div = document.createElement('div');
             div.className = 'masonry-item bg-gray-50 flex flex-col items-center justify-center border-dashed border-2 border-gray-200';
-            div.innerHTML = `<div class="w-6 h-6 border-2 border-gray-100 border-t-black rounded-full animate-spin mb-3"></div><span class="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">${text}</span>`;
+            div.innerHTML = `<div class="w-6 h-6 border-2 border-gray-100 border-t-black rounded-full animate-spin mb-3"></div><span data-placeholder-label class="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">${text}</span>`;
             return div;
         }
 
@@ -735,6 +832,7 @@
         }, { threshold: 0.1 });
 
         window.onload = () => {
+            updateSizePreview();
             initApiProviders();
             loadHistory(0).then(() => {
                 window.HistoryBulkManager?.attach({masonry:'#masonry'});
