@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-05-19
+
+- Documented the fork-first maintenance flow: `origin` is the user-owned `vecyang1/Infinite-Canvas` fork and `upstream` is the original `hero8152/Infinite-Canvas` repo.
+- Added agent instructions for branch bases and GitHub flow so future work pushes to the user-owned fork instead of depending on upstream PR acceptance.
+
 ## 2026-05-18
 
 - Added `scripts/configure_provider.py`, a safe agent-friendly CLI for configuring custom API providers.

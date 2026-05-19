@@ -1,6 +1,8 @@
 # Infinite-Canvas
 Supports comfyui/API calls/modelscope calls
 
+Maintainer fork flow: see `docs/FORK_FLOW.md`.
+
 ## Agent-friendly custom API setup
 
 This repo supports custom OpenAI-compatible and APIMart-style API providers from both the web UI and an agent-safe CLI.
