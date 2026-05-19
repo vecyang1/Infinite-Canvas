@@ -92,7 +92,7 @@
             padding: 4px;
             border-radius: 14px;
             display: flex;
-            width: 390px;
+            width: 260px;
         }
 
         .mode-btn {
@@ -116,7 +116,7 @@
         .mode-glider {
             position: absolute;
             height: calc(100% - 8px);
-            width: calc(33.333% - 4px);
+            width: calc(50% - 4px);
             background: #fff;
             border-radius: 11px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
@@ -174,7 +174,7 @@
 
         @media (max-width: 768px) {
             .mode-switcher {
-                width: min(390px, calc(100vw - 96px));
+                width: min(260px, calc(100vw - 96px));
             }
 
             .api-provider-panel {
@@ -276,11 +276,6 @@
                                     onclick="switchEngine('api')">
                                     <i data-lucide="wand-sparkles" class="w-3 h-3"></i>
                                     <span>API</span>
-                                </div>
-                                <div id="modeCloud" class="mode-btn flex items-center justify-center gap-1.5"
-                                    onclick="switchEngine('cloud')">
-                                    <i data-lucide="cloud" class="w-3 h-3"></i>
-                                    <span>ModelScope</span>
                                 </div>
                                 <div id="glider" class="mode-glider"></div>
                             </div>
@@ -437,8 +432,9 @@
         };
 
         let currentEngine = 'local';
-        const MS_TOKEN_KEY = 'modelscope_api_token';
         const ENGINE_MODE_KEY = 'zimage_engine_mode';
+        const initialSavedEngine = localStorage.getItem(ENGINE_MODE_KEY);
+        const legacyCloudEngine = initialSavedEngine === 'cloud';
 
         // 1. Token handled via index.html sidebar
         function escapeHtml(str){
@@ -450,8 +446,19 @@
             return (list || []).map(item => String(item || '').trim()).filter(item => item && !seen.has(item) && seen.add(item));
         }
 
+        function orderedImageProviders(providers){
+            return (providers || [])
+                .map((p, index) => ({...p, _index:index}))
+                .filter(p => p.enabled !== false && (p.image_models || []).length)
+                .sort((a, b) => {
+                    const rank = p => p.primary === true ? 0 : p.id === 'modelscope' ? 2 : 1;
+                    return rank(a) - rank(b) || a._index - b._index;
+                })
+                .map(({_index, ...p}) => p);
+        }
+
         function apiImageProviders(){
-            return (apiProviders || []).filter(p => p.id !== 'modelscope' && p.enabled !== false && (p.image_models || []).length);
+            return orderedImageProviders(apiProviders);
         }
 
         function apiProviderById(id){
@@ -522,8 +529,11 @@
             } catch (e) {
                 apiProviders = [];
             }
+            if(legacyCloudEngine && apiImageProviders().some(p => p.id === 'modelscope')) {
+                apiProvider = 'modelscope';
+            }
             renderApiControls();
-            switchEngine(currentEngine || localStorage.getItem(ENGINE_MODE_KEY) || 'local');
+            switchEngine(currentEngine || initialSavedEngine || 'local');
         }
 
         function setApiProvider(next){
@@ -544,36 +554,33 @@
                     ? `${tr('studio.renderApi')} · ${activeApiTasks}`
                     : tr('studio.renderApi');
             }
-            else if(currentEngine === 'cloud') btnText.innerText = tr('studio.renderCloud');
             else btnText.innerText = tr('studio.renderLocal');
         }
 
         // 2. 切换引擎逻辑
         function switchEngine(mode) {
-            if (!['local', 'api', 'cloud'].includes(mode)) mode = 'local';
+            if (mode === 'cloud') mode = 'api';
+            if (!['local', 'api'].includes(mode)) mode = 'local';
             currentEngine = mode;
             localStorage.setItem(ENGINE_MODE_KEY, mode); // Save state
 
             const glider = document.getElementById('glider');
             const localBtn = document.getElementById('modeLocal');
             const apiBtn = document.getElementById('modeApi');
-            const cloudBtn = document.getElementById('modeCloud');
             const apiPanel = document.getElementById('apiProviderPanel');
             const apiDivider = document.getElementById('apiProviderDivider');
-            const index = mode === 'api' ? 1 : mode === 'cloud' ? 2 : 0;
+            const index = mode === 'api' ? 1 : 0;
             glider.style.transform = `translateX(${index * 100}%)`;
             localBtn.classList.toggle('active', mode === 'local');
             apiBtn.classList.toggle('active', mode === 'api');
-            cloudBtn.classList.toggle('active', mode === 'cloud');
             apiPanel?.classList.toggle('visible', mode === 'api');
             apiDivider?.classList.toggle('hidden', mode !== 'api');
             updateRenderButtonText();
         }
 
         // Initialize Engine Mode
-        const savedEngine = localStorage.getItem(ENGINE_MODE_KEY);
-        if (savedEngine && savedEngine !== 'local') {
-            switchEngine(savedEngine);
+        if (initialSavedEngine && initialSavedEngine !== 'local') {
+            switchEngine(initialSavedEngine);
         }
 
         // 3. 统一渲染入口
@@ -583,10 +590,8 @@
 
             if (currentEngine === 'local') {
                 runLocalTask(prompt);
-            } else if (currentEngine === 'api') {
-                runApiTask(prompt);
             } else {
-                runCloudTask(prompt);
+                runApiTask(prompt);
             }
         }
 
@@ -652,51 +657,7 @@
             }
         }
 
-        // 5. ModelScope 云端逻辑
-        async function runCloudTask(prompt) {
-            let apiKey = localStorage.getItem(MS_TOKEN_KEY);
-            let hasServerToken = false;
-            if (!apiKey) {
-                try {
-                    const res = await fetch('/api/config/token');
-                    const data = await res.json();
-                    hasServerToken = !!data.has_token;
-                } catch (e) { }
-            }
-            if (!apiKey && !hasServerToken) return alert(tr('studio.modelscopeTokenRequired'));
-
-            const btn = document.getElementById('mainGenBtn');
-            setLoading(true);
-
-            const placeholder = createPlaceholder("ModelScope Rendering");
-            document.getElementById('masonry').prepend(placeholder);
-
-            try {
-                const res = await fetch('/generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        prompt: prompt,
-                        api_key: apiKey || '',
-                        resolution: apiImageSize()
-                    })
-                });
-                const data = await res.json();
-                placeholder.remove();
-                if (res.ok && data.url) {
-                    renderImageCard({ timestamp: Date.now(), prompt, images: [data.url], type: 'cloud' }, true);
-                } else {
-                    throw new Error(data.detail?.errors?.message || data.detail || "Cloud Error");
-                }
-            } catch (e) {
-                placeholder.remove();
-                alert(e.message);
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        // 6. 本地任务逻辑
+        // 5. 本地任务逻辑
         async function runLocalTask(prompt) {
             setLoading(true);
             const placeholder = createPlaceholder("Local Rendering");

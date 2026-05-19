@@ -93,7 +93,11 @@ Generates one image through the selected provider. Body:
 
 For OpenAI-compatible GPT Image models such as `gpt-image-2`, text-only requests use `POST /v1/images/generations`. Requests with `reference_images` or mask images use multipart `POST /v1/images/edits`; GPT Image responses are expected as base64 image data rather than URL-only responses.
 
-Frontend consumers include the standalone Online Image page, Infinite Canvas API generation nodes, GPT Chat image mode, and the default Text to Image console (`static/zimage.html`) API engine. The Text to Image console filters out `modelscope` for its generic API tab, keeps ModelScope as its own engine, and prefers `gpt-image-*` models when a provider also advertises image-like models that are not accepted by `/v1/images/generations`.
+Frontend consumers include the standalone Online Image page, Infinite Canvas API generation nodes, GPT Chat image mode, and the default Text to Image console (`static/zimage.html`) API engine. The Text to Image console and Infinite Canvas API generation nodes treat all remote image-capable services as API providers, including VectorEngine-style OpenAI-compatible providers and ModelScope. Provider pickers order explicit `primary` providers first, then non-ModelScope providers such as `vt-260518`, then ModelScope, so VectorEngine remains the normal default unless ModelScope is intentionally marked primary. When a provider lists both GPT Image models and Gemini image-preview models, these UIs prefer `gpt-image-*` as the default model because it maps cleanly to the `/v1/images/generations` and `/v1/images/edits` request paths.
+
+ModelScope remains provider-specific because it has extra concepts such as LoRA bindings and curated presets. Those extras should appear as conditional controls when `modelscope` is selected or in the dedicated Canvas ModelScope node, not as a separate top-level engine beside `API`.
+
+The former Text to Image `cloud` engine state is migrated on page load: old `zimage_engine_mode = "cloud"` sessions reopen in the API engine with `modelscope` preselected when that provider is available.
 
 The Text to Image console does not call `/api/online-image` directly. It starts background work through `/api/canvas-image-tasks` so each click can create a separate in-flight API image task while earlier tasks continue rendering. Its size UI is ratio + resolution:
 

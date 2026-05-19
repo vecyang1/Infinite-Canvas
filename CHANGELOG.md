@@ -4,6 +4,7 @@
 
 - Documented the fork-first maintenance flow: `origin` is the user-owned `vecyang1/Infinite-Canvas` fork and `upstream` is the original `hero8152/Infinite-Canvas` repo.
 - Added agent instructions for branch bases and GitHub flow so future work pushes to the user-owned fork instead of depending on upstream PR acceptance.
+- Unified remote image providers under the API picker: VectorEngine remains the default non-ModelScope provider, ModelScope is available as an API provider with provider-specific extras, old Text-to-Image `cloud` sessions migrate to API + ModelScope, and Canvas/Text-to-Image prefer `gpt-image-*` as the default model when a provider advertises multiple image model families.
 
 ## 2026-05-18
 
