@@ -12,9 +12,9 @@ SCRIPT = ROOT / "scripts" / "configure_provider.py"
 API_SETTINGS = (ROOT / "static" / "api-settings.html").read_text(encoding="utf-8")
 I18N = (ROOT / "static" / "i18n.js").read_text(encoding="utf-8")
 ZIMAGE = (ROOT / "static" / "zimage.html").read_text(encoding="utf-8")
+CANVAS = (ROOT / "static" / "canvas.html").read_text(encoding="utf-8")
 GITIGNORE = ROOT / ".gitignore"
-MS_STATIC_PAGES = [
-    (ROOT / "static" / "zimage.html").read_text(encoding="utf-8"),
+MS_TOKEN_STATUS_PAGES = [
     (ROOT / "static" / "angle.html").read_text(encoding="utf-8"),
     (ROOT / "static" / "enhance.html").read_text(encoding="utf-8"),
 ]
@@ -242,6 +242,8 @@ class AgentProviderConfigTest(unittest.TestCase):
     def test_text_to_image_console_exposes_api_generation_mode(self):
         self.assertIn("id=\"modeApi\"", ZIMAGE)
         self.assertIn("switchEngine('api')", ZIMAGE)
+        self.assertNotIn("id=\"modeCloud\"", ZIMAGE)
+        self.assertNotIn("switchEngine('cloud')", ZIMAGE)
         self.assertIn("runApiTask(prompt)", ZIMAGE)
         self.assertIn("fetch('/api/config')", ZIMAGE)
         self.assertIn("fetch('/api/canvas-image-tasks'", ZIMAGE)
@@ -254,6 +256,39 @@ class AgentProviderConfigTest(unittest.TestCase):
         self.assertIn("'studio.renderApi': 'API 生成'", I18N)
         self.assertIn("'studio.renderApi': 'API Generate'", I18N)
 
+    def test_text_to_image_api_picker_includes_modelscope_after_non_ms_providers(self):
+        self.assertIn("function orderedImageProviders", ZIMAGE)
+        self.assertIn("p.primary === true", ZIMAGE)
+        self.assertIn("p.id === 'modelscope'", ZIMAGE)
+        self.assertNotIn("filter(p => p.id !== 'modelscope'", ZIMAGE)
+        self.assertIn("orderedImageProviders(apiProviders)", ZIMAGE)
+
+    def test_text_to_image_legacy_cloud_mode_migrates_to_modelscope_api_provider(self):
+        self.assertIn("const initialSavedEngine = localStorage.getItem(ENGINE_MODE_KEY);", ZIMAGE)
+        self.assertIn("const legacyCloudEngine = initialSavedEngine === 'cloud';", ZIMAGE)
+        self.assertIn("legacyCloudEngine && apiImageProviders().some(p => p.id === 'modelscope')", ZIMAGE)
+        self.assertIn("apiProvider = 'modelscope';", ZIMAGE)
+        self.assertIn("switchEngine(currentEngine || initialSavedEngine || 'local')", ZIMAGE)
+        self.assertNotIn("async function runCloudTask", ZIMAGE)
+        self.assertNotIn("localStorage.getItem(MS_TOKEN_KEY)", ZIMAGE)
+
+    def test_canvas_api_generator_includes_modelscope_with_provider_ordering(self):
+        image_provider_start = CANVAS.index("function imageApiProviders")
+        image_provider_end = CANVAS.index("function providerById", image_provider_start)
+        image_provider_block = CANVAS[image_provider_start:image_provider_end]
+        self.assertIn("function orderedImageProviders", CANVAS)
+        self.assertIn("p.primary === true", CANVAS)
+        self.assertIn("p.id === 'modelscope'", CANVAS)
+        self.assertNotIn("p.id !== 'modelscope'", image_provider_block)
+        self.assertIn("orderedImageProviders(apiProviders.length ? apiProviders : defaultApiProviders())", CANVAS)
+        self.assertIn("function preferredApiImageModel", CANVAS)
+        self.assertIn("preferredApiImageModel(providerImageModels(providerId))", CANVAS)
+        self.assertIn("preferredApiImageModel(imageProviderModels)", CANVAS)
+        self.assertIn("preferredApiImageModel(providerModels)", CANVAS)
+        self.assertNotIn("model:allImageModels(providerId)[0] || ''", CANVAS)
+        self.assertNotIn("node.model = imageProviderModels[0] || ''", CANVAS)
+        self.assertNotIn("node.model = providerModels[0] || ''", CANVAS)
+
     def test_text_to_image_console_uses_async_api_tasks_and_ratio_size_controls(self):
         self.assertIn("id=\"ratioSelect\"", ZIMAGE)
         self.assertIn("id=\"resolutionSelect\"", ZIMAGE)
@@ -262,6 +297,7 @@ class AgentProviderConfigTest(unittest.TestCase):
         self.assertIn("'1k':'1024x1024'", ZIMAGE)
         self.assertIn("'2k':'2048x2048'", ZIMAGE)
         self.assertIn("'4k':'2880x2880'", ZIMAGE)
+        self.assertIn("'4k':'2880x2880'", CANVAS)
         self.assertIn("fetch('/api/canvas-image-tasks'", ZIMAGE)
         self.assertIn("pollApiTask", ZIMAGE)
         self.assertIn("size:apiImageSize()", ZIMAGE)
@@ -270,10 +306,12 @@ class AgentProviderConfigTest(unittest.TestCase):
         self.assertNotIn("size: `${document.getElementById('width').value}x${document.getElementById('height').value}`", ZIMAGE)
 
     def test_modelscope_static_pages_do_not_read_raw_saved_token(self):
-        for page in MS_STATIC_PAGES:
+        for page in MS_TOKEN_STATUS_PAGES:
             self.assertIn("has_token", page)
             self.assertNotIn("data.token", page)
             self.assertNotIn("tokenData.token", page)
+        self.assertNotIn("data.token", ZIMAGE)
+        self.assertNotIn("tokenData.token", ZIMAGE)
 
     def test_private_runtime_files_are_ignored_for_public_contribution(self):
         text = GITIGNORE.read_text(encoding="utf-8")
