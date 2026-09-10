@@ -27,3 +27,22 @@ __pycache__/
 # OS/editor noise
 .DS_Store
 *.swp
+
+# Private files & local state
+CLAUDE.md
+GEMINI.md
+CODEX.md
+VAULT.md
+decisions.md
+progress.md
+task_plan.md
+handoff.md
+PROJECT_LINKS.md
+FILE_MAP_INDEX.md
+PRINCIPLES.md
+MEMORY.md
+graphify-out/
+.planning/
+.specify/
+.agent/
+.claude/

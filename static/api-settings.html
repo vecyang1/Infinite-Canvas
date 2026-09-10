@@ -695,7 +695,7 @@
             if(btn){ btn.disabled = true; btn.querySelector('span').textContent = '检测中...'; }
             showVerifyResult(`<span style="color:var(--muted);font-size:11px;font-weight:700">正在检测协议类型...</span>`);
             try {
-                const apiKey = keyInput.value.trim();
+                const apiKey = (keyInput.value.trim());
                 const data = await fetch('/api/providers/probe-async', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -739,7 +739,7 @@
             if(btn){ btn.disabled = true; btn.querySelector('span').textContent = tr('api.testingUrl') || '验证中...'; }
             showVerifyResult(`<span style="color:var(--muted);font-size:11px;font-weight:700">验证中...</span>`);
             try {
-                const apiKey = keyInput.value.trim();
+                const apiKey = (keyInput.value.trim());
                 const data = await fetch('/api/providers/test-connection', {
                     method: 'POST', headers: {'Content-Type':'application/json'},
                     body: JSON.stringify({ base_url: baseUrl, api_key: apiKey, provider_id: item.id })
@@ -778,7 +778,7 @@
             syncEditor();
             const btn = document.getElementById('fetchModelsBtn');
             const baseUrl = baseInput.value.trim();
-            const apiKey = keyInput.value.trim();
+            const apiKey = (keyInput.value.trim());
             if(!baseUrl){ alert('请先填写请求地址'); return; }
             if(btn){ btn.disabled = true; btn.querySelector('span').textContent = tr('api.fetchingModels') || '拉取中...'; }
             setStatus(tr('api.fetchingModels') || '正在从上游拉取模型列表...');
