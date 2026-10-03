@@ -1,5 +1,10 @@
 # Changelog
 
+## [2026-09-12] - 2026-09-12
+
+### Fixes
+- Sanitize credentials, add MIT license, and untrack private files (`05ea6d4`)
+
 ## 2026-05-19
 
 - Documented the fork-first maintenance flow: `origin` is the user-owned `vecyang1/Infinite-Canvas` fork and `upstream` is the original `hero8152/Infinite-Canvas` repo.
